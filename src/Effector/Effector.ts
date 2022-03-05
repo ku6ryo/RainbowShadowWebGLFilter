@@ -62,7 +62,7 @@ export class Effector {
       1.0,  1.0,
     ]), gl.STATIC_DRAW);
 
-    const cropTargetTexture = this.createTexture(cropTargetImage)
+    const targetTexture = this.createTexture(cropTargetImage)
     const maskTexture = this.createTexture(mask)
     const u_image0Location = gl.getUniformLocation(this.#program, "u_imageTarget");
     const u_image1Location = gl.getUniformLocation(this.#program, "u_imageMask");
@@ -71,7 +71,7 @@ export class Effector {
     gl.uniform1i(u_image1Location, 1);  // texture unit 1
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, cropTargetTexture);
+    gl.bindTexture(gl.TEXTURE_2D, targetTexture);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, maskTexture);
 
@@ -126,6 +126,8 @@ export class Effector {
     var offset = 0;
     var count = 6;
     gl.drawArrays(primitiveType, offset, count);
+    gl.deleteTexture(targetTexture)
+    gl.deleteTexture(maskTexture)
   }
 
   createTexture(image: HTMLCanvasElement | ImageBitmap) {
