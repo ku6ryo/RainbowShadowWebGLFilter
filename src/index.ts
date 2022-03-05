@@ -32,6 +32,8 @@ function main() {
     prevMaskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height)
     prevMaskContext.globalAlpha = 1
     prevMaskContext.drawImage(maskCanvas, 0, 0, prevMaskCanvas.width, prevMaskCanvas.height)
+
+    detectionReady = true
   })
 
   const mainCanvas = document.createElement("canvas")
@@ -96,12 +98,13 @@ function main() {
 
   const cropper = new Effector()
 
-  let detectedTime = performance.now()
+  let detectionReady = true
+  performance.now()
   async function process () {
     stats.begin()
-    if (detectedTime + 10 < performance.now()) {
+    if (detectionReady) {
       await seg.send({ image: cameraVideo })
-      detectedTime = performance.now()
+      detectionReady = false
     }
     cropper.process(cameraCanvas, maskCanvas)
     mainContext.drawImage(cropper.getCanvas(), 0, 0, mainCanvas.width, mainCanvas.height)
