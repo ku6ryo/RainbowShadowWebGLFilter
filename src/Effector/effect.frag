@@ -11,11 +11,8 @@ void main() {
   vec2 iUV = vec2(1.0 - v_texCoord.x, v_texCoord.y);
   vec4 displacement = texture2D(u_imageMask, iUV);
   float d = displacement.a;
-  float intensity = d;
   if (d > 0.7) {
-    intensity = d * pow(8.0, (0.7 - d) * 5.0);
-  } else {
-    intensity = d * pow(-8.0, d * 5.0);
+    d = 0.7 * pow(100.0, (0.7 - d));
   }
   float theta = d * 2. * PI;
   vec2 direction = vec2(cos(theta), sin(theta));

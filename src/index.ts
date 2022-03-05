@@ -1,40 +1,17 @@
 import { SelfieSegmentation } from "@mediapipe/selfie_segmentation"
 import Stats from "stats.js"
 import { Effector } from "./Effector/Effector"
+import { Segmentor } from "./Segmentor"
 
 const stats = new Stats()
 document.body.appendChild(stats.dom)
 
 main()
 
-function main() {
+async function main() {
 
-  const seg = new SelfieSegmentation({locateFile: (file) => {
-    return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1/${file}`;
-  }})
-  seg.setOptions({
-    selfieMode: true,
-    modelSelection: 1,
-  })
-
-  seg.onResults(results => {
-    cameraContext.filter = "grayscale(100%)"
-    cameraContext.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height)
-    cameraContext.drawImage(cameraVideo, 0, 0, cameraCanvas.width, cameraCanvas.height)
-
-    maskContext.filter = "blur(15px)"
-    maskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height)
-    maskContext.globalAlpha = 0.95
-    maskContext.drawImage(prevMaskCanvas, 0, 0, maskCanvas.width, maskCanvas.height)
-    maskContext.globalAlpha = 0.4
-    maskContext.drawImage(results.segmentationMask, 0, 0, maskCanvas.width, maskCanvas.height)
-
-    prevMaskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height)
-    prevMaskContext.globalAlpha = 1
-    prevMaskContext.drawImage(maskCanvas, 0, 0, prevMaskCanvas.width, prevMaskCanvas.height)
-
-    detectionReady = true
-  })
+  const segmentor = new Segmentor()
+  const effector = new Effector()
 
   const mainCanvas = document.createElement("canvas")
   const mainContext = mainCanvas.getContext("2d")!
@@ -56,12 +33,11 @@ function main() {
     maskCanvas.height = vh
     prevMaskCanvas.width = vw
     prevMaskCanvas.height = vh
-    cropper.setSize(vw, vh)
+    effector.setSize(vw, vh)
     requestAnimationFrame(process)
   })
   const cameraCanvas = document.createElement("canvas")
   const cameraContext = cameraCanvas.getContext("2d")!
-  document.body.appendChild(cameraCanvas)
 
   const maskCanvas = document.createElement("canvas")
   const maskContext = maskCanvas.getContext("2d")!
@@ -96,18 +72,30 @@ function main() {
     alert("getUserMedia not supported on your browser!");
   }
 
-  const cropper = new Effector()
-
-  let detectionReady = true
-  performance.now()
   async function process () {
     stats.begin()
-    if (detectionReady) {
-      await seg.send({ image: cameraVideo })
-      detectionReady = false
+    cameraContext.filter = "grayscale(100%)"
+    cameraContext.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height)
+    cameraContext.drawImage(cameraVideo, 0, 0, cameraCanvas.width, cameraCanvas.height)
+
+    if (!segmentor.processing()) {
+      segmentor.process(cameraCanvas)
     }
-    cropper.process(cameraCanvas, maskCanvas)
-    mainContext.drawImage(cropper.getCanvas(), 0, 0, mainCanvas.width, mainCanvas.height)
+
+    const mask = segmentor.getMask()
+    if (mask) {
+      maskContext.filter = "blur(5px)"
+      maskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height)
+      maskContext.globalAlpha = 0.95
+      maskContext.drawImage(prevMaskCanvas, 0, 0, maskCanvas.width, maskCanvas.height)
+      maskContext.globalAlpha = 0.8
+      maskContext.drawImage(mask, 0, 0, maskCanvas.width, maskCanvas.height)
+      prevMaskContext.clearRect(0, 0, maskCanvas.width, maskCanvas.height)
+      prevMaskContext.globalAlpha = 1
+      prevMaskContext.drawImage(maskCanvas, 0, 0, prevMaskCanvas.width, prevMaskCanvas.height)
+    }
+    effector.process(cameraCanvas, maskCanvas)
+    mainContext.drawImage(effector.getCanvas(), 0, 0, mainCanvas.width, mainCanvas.height)
 
     stats.end()
     requestAnimationFrame(process)
